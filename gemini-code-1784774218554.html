@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>911 - Пасты ПДФ</title>
+    <!-- Подключаем Firebase для общей базы данных в реальном времени -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Твоя бесплатная конфигурация Firebase
+        const firebaseConfig = {
+            databaseURL: "https://PASTE_DB_URL_DEFAULT-default-rtdb.firebaseio.com/" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const pastesRef = ref(db, 'pastes');
+
+        window.dbFunctions = {
+            addPaste: function(title, text) {
+                push(pastesRef, { title: title, text: text });
+            },
+            deletePaste: function(id) {
+                remove(ref(db, 'pastes/' + id));
+            },
+            listenPastes: function(callback) {
+                onValue(pastesRef, (snapshot) => {
+                    const data = snapshot.val();
+                    const pastes = [];
+                    for (let id in data) {
+                        pastes.unshift({ id: id, ...data[id] });
+                    }
+                    callback(pastes);
+                });
+            }
+        };
+    </script>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background-color: #050000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            color: #ff3333;
+            padding-bottom: 50px;
+            overflow-x: hidden;
+        }
+        h1 {
+            color: #b30000;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 90px;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            letter-spacing: 8px;
+            font-weight: bold;
+            font-style: italic;
+            text-shadow: 
+                0 0 5px #ff0000,
+                0 0 15px #8b0000,
+                0 0 30px #4d0000,
+                3px 5px 2px #000000;
+            position: relative;
+        }
+        h1::after {
+            content: "";
+            position: absolute;
+            bottom: -15px;
+            left: 20%;
+            width: 8px;
+            height: 25px;
+            background: #b30000;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 
+                35px 12px 0 2px #b30000,
+                75px 4px 0 0px #b30000,
+                120px 20px 0 4px #b30000;
+            animation: drip 2.5s infinite ease-in;
+        }
+        .subtitle {
+            color: #ff3333;
+            font-size: 24px;
+            letter-spacing: 10px;
+            text-shadow: 0 0 10px #ff0000;
+            border-top: 2px solid #5a0000;
+            border-bottom: 2px solid #5a0000;
+            padding: 8px 30px;
+            margin-top: 10px;
+            margin-bottom: 30px;
+            background: rgba(20, 0, 0, 0.4);
+        }
+        .btn-add {
+            background-color: #1a0000;
+            color: #ff3333;
+            border: 2px solid #b30000;
+            padding: 12px 25px;
+            font-size: 18px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 2px;
+            box-shadow: 0 0 10px #8b0000;
+            transition: 0.3s;
+            margin-bottom: 20px;
+        }
+        .btn-add:hover {
+            background-color: #b30000;
+            color: #000000;
+            box-shadow: 0 0 20px #ff0000;
+        }
+        .modal {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(10, 0, 0, 0.95);
+            border: 2px solid #b30000;
+            padding: 20px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 0 25px #5a0000;
+            margin-bottom: 30px;
+            gap: 15px;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            background-color: #000000;
+            color: #ff3333;
+            border: 1px solid #8b0000;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: #ff0000;
+            box-shadow: 0 0 8px #ff0000;
+        }
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+        .btn-submit {
+            background-color: #b30000;
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 0 10px #ff0000;
+        }
+        .btn-submit:hover {
+            background-color: #ff0000;
+        }
+        .feed {
+            width: 85%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .paste-card {
+            background: rgba(15, 0, 0, 0.7);
+            border: 1px solid #3a0000;
+            border-left: 4px solid #b30000;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.2);
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .paste-card:hover {
+            border-color: #ff0000;
+            background: rgba(25, 0, 0, 0.9);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-title {
+            color: #ff3333;
+            font-weight: bold;
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+        .btn-delete {
+            background: transparent;
+            border: 1px solid #b30000;
+            color: #ff3333;
+            padding: 2px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .btn-delete:hover {
+            background: #b30000;
+            color: #000;
+        }
+        @keyframes drip {
+            0% { transform: scaleY(0.8); opacity: 0.9; }
+            70% { transform: scaleY(1.3); opacity: 0.7; }
+            100% { transform: scaleY(0.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>911</h1>
+    <div class="subtitle">ПАСТЫ ПДФ</div>
+
+    <button class="btn-add" onclick="toggleModal()">ДОБАВИТЬ ПАСТУ</button>
+
+    <div class="modal" id="modalForm">
+        <input type="text" id="titleInput" placeholder="Название (например: дваоп)...">
+        <textarea id="pasteInput" placeholder="Текст пасты..."></textarea>
+        <button class="btn-submit" onclick="submitPaste()">ДОБАВИТЬ ПАСТУ В САЙТ</button>
+    </div>
+
+    <div class="feed" id="pasteFeed">
+        <!-- Сюда загружаются общие пасты в реальном времени -->
+    </div>
+
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            // Ждем инициализации базы и подгружаем пасты для всех
+            const checkDbInterval = setInterval(() => {
+                if (window.dbFunctions) {
+                    clearInterval(checkDbInterval);
+                    window.dbFunctions.listenPastes(renderPastes);
+                }
+            }, 100);
+        });
+
+        function toggleModal() {
+            const modal = document.getElementById('modalForm');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function submitPaste() {
+            const titleInput = document.getElementById('titleInput');
+            const pasteInput = document.getElementById('pasteInput');
+            
+            const title = titleInput.value.trim() || "ПАСТА ПДФ";
+            const text = pasteInput.value.trim();
+            
+            if (text === "") return;
+
+            // Отправляем в общую базу данных, чтобы видели все
+            window.dbFunctions.addPaste(title, text);
+
+            titleInput.value = '';
+            pasteInput.value = '';
+            toggleModal();
+        }
+
+        function deletePaste(id, event) {
+            event.stopPropagation();
+            window.dbFunctions.deletePaste(id);
+        }
+
+        function renderPastes(pastes) {
+            const feed = document.getElementById('pasteFeed');
+            feed.innerHTML = '';
+
+            pastes.forEach((item) => {
+                const card = document.createElement('div');
+                card.className = 'paste-card';
+
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'card-header';
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'card-title';
+                titleDiv.textContent = item.title;
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-delete';
+                deleteBtn.textContent = "X";
+                deleteBtn.onclick = (e) => deletePaste(item.id, e);
+
+                headerDiv.appendChild(titleDiv);
+                headerDiv.appendChild(deleteBtn);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.style.display = 'none';
+                contentDiv.style.whiteSpace = 'pre-wrap';
+                contentDiv.style.wordBreak = 'break-word';
+                contentDiv.style.color = '#ff9999';
+                contentDiv.style.marginTop = '10px';
+                contentDiv.style.borderTop = '1px solid #3a0000';
+                contentDiv.style.paddingTop = '10px';
+                contentDiv.textContent = item.text;
+
+                card.appendChild(headerDiv);
+                card.appendChild(contentDiv);
+
+                card.onclick = function() {
+                    if (contentDiv.style.display === 'none') {
+                        contentDiv.style.display = 'block';
+                    } else {
+                        contentDiv.style.display = 'none';
+                    }
+                };
+
+                feed.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
